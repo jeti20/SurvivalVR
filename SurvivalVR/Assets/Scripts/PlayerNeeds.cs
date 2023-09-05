@@ -4,114 +4,122 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 
-public class PlayerNeeds : MonoBehaviour
+public class PlayerNeeds : MonoBehaviour, IDamagable
 {
     public Need health;
     public Need hunger;
     public Need thirst;
-    public Need sleep;   
+    public Need sleep;
 
     public float noHungerHealthDecay;
     public float noThirstHealthDecay;
 
     public UnityEvent onTakeDamage;
 
-    private void Start()
+    void Start()
     {
+        // set the start values
         health.curValue = health.startValue;
         hunger.curValue = hunger.startValue;
         thirst.curValue = thirst.startValue;
         sleep.curValue = sleep.startValue;
     }
 
-    private void Update()
+    void Update()
     {
-        //decay needs over times
-        hunger.Subtract(hunger.decayRate * Time.deltaTime); //it is decreasing 1 by 1 second
-        thirst.Subtract(thirst.decayRate * Time.deltaTime); 
-        sleep.Add(sleep.decayRate * Time.deltaTime);
+        // decay needs over time
+        hunger.Subtract(hunger.decayRate * Time.deltaTime);
+        thirst.Subtract(thirst.decayRate * Time.deltaTime);
+        sleep.Add(sleep.regenRate * Time.deltaTime);
 
-        //if we starving/thirsty it take our hp
+        // decay health over time if no hunger or thirst
         if (hunger.curValue == 0.0f)
-        {
             health.Subtract(noHungerHealthDecay * Time.deltaTime);
-        }
         if (thirst.curValue == 0.0f)
-        {
-            thirst.Subtract(noThirstHealthDecay * Time.deltaTime);
-        }
+            health.Subtract(noThirstHealthDecay * Time.deltaTime);
 
-        //check if player is dead
+        // check if player is dead
         if (health.curValue == 0.0f)
         {
             Die();
         }
 
-
-        //update UI bar
-        health.uiBar.fillAmount = health.GetPrecentage();
-        hunger.uiBar.fillAmount = hunger.GetPrecentage();
-        thirst.uiBar.fillAmount = thirst.GetPrecentage();
-        sleep.uiBar.fillAmount = sleep.GetPrecentage();
+        // update UI bars
+        health.uiBar.fillAmount = health.GetPercentage();
+        hunger.uiBar.fillAmount = hunger.GetPercentage();
+        thirst.uiBar.fillAmount = thirst.GetPercentage();
+        sleep.uiBar.fillAmount = sleep.GetPercentage();
     }
 
-    public void Heal (float amout)
+    // adds to the player's HEALTH
+    public void Heal(float amount)
     {
-        health.Add(amout);
+        health.Add(amount);
     }
 
-    public void Eat (float amount)
+    // adds to the player's HUNGER
+    public void Eat(float amount)
     {
         hunger.Add(amount);
     }
 
-    public void Drink (float amount) 
+    // adds to the player's THIRST
+    public void Drink(float amount)
     {
         thirst.Add(amount);
     }
 
-    public void Sleep (float amout)
+    // subtracts from the player's SLEEP
+    public void Sleep(float amount)
     {
-        sleep.Subtract(amout);
+        sleep.Subtract(amount);
     }
 
-    public void TakePhysicalDamage (int amout)
+    // called when the player takes physical damage (fire, enemy, etc)
+    public void TakePhysicalDamage(int amount)
     {
-        health.Subtract(amout);
-        //? means that if there is null (nothing subscribe this event) this will not invoke, but if there is it is going invoke
+        health.Subtract(amount);
         onTakeDamage?.Invoke();
     }
 
+    // called when the player's health reaches 0
     public void Die()
     {
-        Debug.Log("Died");
+        Debug.Log("Player is dead");
     }
-
 }
 
 [System.Serializable]
 public class Need
 {
+    [HideInInspector]
     public float curValue;
     public float maxValue;
     public float startValue;
     public float regenRate;
     public float decayRate;
-    public Image uiBar; //Bar which is inreacing or decreasing
+    public Image uiBar;
 
-    public void Add (float amount)
+    // add to the need
+    public void Add(float amount)
     {
         curValue = Mathf.Min(curValue + amount, maxValue);
     }
 
-    public void Subtract (float amount)
+    // subtract from the need
+    public void Subtract(float amount)
     {
         curValue = Mathf.Max(curValue - amount, 0.0f);
     }
 
-    //using this to manipulate uiBar
-    public float GetPrecentage()
+    // return the percentage value (0.0 - 1.0)
+    public float GetPercentage()
     {
         return curValue / maxValue;
     }
+}
+
+public interface IDamagable
+{
+    void TakePhysicalDamage(int damageAmount);
 }
